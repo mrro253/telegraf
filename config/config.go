@@ -1520,8 +1520,6 @@ func (c *Config) getParserConfig(name string, tbl *ast.Table) (*parsers.Config, 
 	c.getFieldString(tbl, "grok_timezone", &pc.GrokTimezone)
 	c.getFieldString(tbl, "grok_unique_timestamp", &pc.GrokUniqueTimestamp)
 
-	c.getFieldStringSlice(tbl, "form_urlencoded_tag_keys", &pc.FormUrlencodedTagKeys)
-
 	c.getFieldString(tbl, "value_field_name", &pc.ValueFieldName)
 
 	// for influx parser
@@ -1765,7 +1763,6 @@ func (c *Config) missingTomlField(_ reflect.Type, key string) error {
 		"collectd_auth_file", "collectd_parse_multivalue", "collectd_security_level", "collectd_typesdb",
 		"dropwizard_metric_registry_path", "dropwizard_tags_path", "dropwizard_tag_paths",
 		"dropwizard_time_format", "dropwizard_time_path",
-		"form_urlencoded_tag_keys",
 		"grok_custom_pattern_files", "grok_custom_patterns", "grok_named_patterns", "grok_patterns",
 		"grok_timezone", "grok_unique_timestamp",
 		"influx_parser_type",

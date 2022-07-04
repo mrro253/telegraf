@@ -55,6 +55,10 @@ and creates metrics using one of the supported [input data formats][].
   ## publishing.
   # persistent_session = false
 
+  ## If set, the consumer will upload the size of each message (in bytes) to
+  ## the internal plugin's metrics
+  collect_bytes_received = true
+
   ## If unset, a random client ID will be generated.
   # client_id = ""
 

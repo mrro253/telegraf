@@ -20,6 +20,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
+	"github.com/influxdata/telegraf/selfstat"
 )
 
 // DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
@@ -91,6 +92,8 @@ type MQTTConsumer struct {
 	topicTagParse string
 	ctx           context.Context
 	cancel        context.CancelFunc
+	bytesRecv     selfstat.Stat
+	messagesRecv  selfstat.Stat
 }
 
 func (*MQTTConsumer) SampleConfig() string {
@@ -147,6 +150,8 @@ func (m *MQTTConsumer) Init() error {
 		}
 	}
 
+	m.bytesRecv = selfstat.Register("mqtt_consumer", "bytes_received", map[string]string{})
+	m.messagesRecv = selfstat.Register("mqtt_consumer", "messages_received", map[string]string{})
 	return nil
 }
 func (m *MQTTConsumer) Start(acc telegraf.Accumulator) error {
@@ -241,6 +246,36 @@ func compareTopics(expected []string, incoming []string) bool {
 }
 
 func (m *MQTTConsumer) onMessage(acc telegraf.TrackingAccumulator, msg mqtt.Message) error {
+	var remainingLength int
+	var qosFlagsSize int
+	var qOsSize int
+	topicSize := len(msg.Topic()) + 2
+	if int(msg.Qos()) == 1 || int(msg.Qos()) == 2 {
+		qOsSize = 2
+	} else {
+		qOsSize = 0
+	}
+	payloadSize := len(msg.Payload())
+	remainingContent := topicSize + qOsSize + payloadSize
+	if remainingContent <= 127 {
+		remainingLength = 1
+	} else if remainingContent <= 16383 {
+		remainingLength = 2
+	} else if remainingContent <= 2097151 {
+		remainingLength = 3
+	} else {
+		remainingLength = 4
+	}
+	publishMessageSize := remainingLength + remainingContent + 1
+	if int(msg.Qos()) == 1 {
+		qosFlagsSize = 4
+	} else if int(msg.Qos()) == 2 {
+		qosFlagsSize = 12
+	}
+	byteCount := publishMessageSize + qosFlagsSize
+	m.bytesRecv.Incr(int64(byteCount))
+	m.messagesRecv.Incr(1)
+
 	metrics, err := m.parser.Parse(msg.Payload())
 	if err != nil {
 		return err
